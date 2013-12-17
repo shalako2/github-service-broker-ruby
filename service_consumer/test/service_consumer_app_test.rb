@@ -40,7 +40,7 @@ describe "/" do
     before do
       @vcap_services_value = <<JSON
       {
-        "github-repo-n/a": [
+        "github-repo": [
           {
             "name": "github-repo-1",
             "label": "github-repo-n/a",
@@ -85,14 +85,13 @@ describe "/env" do
     before do
       @vcap_services_value = <<JSON
       {
-        "github-repo-n/a": [
+        "github-repo": [
           {
             "name": "github-repo-1",
             "label": "github-repo-n/a",
             "plan": "public",
             "credentials": {
-              "uri": "https://github.com/octocat/hello-world",
-              "private_key": "-----BEGIN RSA PRIVATE KEY-----\\nZZZ\\n-----END RSA PRIVATE KEY-----\\n"
+              "password": "topsecret"
             }
           }
         ]
@@ -121,7 +120,7 @@ JSON
     before do
       @vcap_services_value = <<JSON
       {
-        "cleardb-n/a": [
+        "cleardb": [
           {
             "name": "cleardb-1",
             "label": "cleardb-n/a",
