@@ -6,8 +6,12 @@ class ServiceConsumerApp < Sinatra::Base
   #declare the routes used by the app
 
   get "/" do
-    content_type "text/plain"
-    messages
+    #response_body = messages
+
+    credentials_list = credentials_of_all_repos
+    repo_uris = credentials_list.map { |c| c["uri"]} unless credentials_list.nil?
+
+    erb :index, locals: { repo_uris: repo_uris, messages: messages }
   end
 
   get "/env" do
@@ -17,6 +21,7 @@ class ServiceConsumerApp < Sinatra::Base
     response_body << messages
     response_body
   end
+
 
   # TODO remove this
   get "/create_commit" do
@@ -120,7 +125,7 @@ BASH
   def messages
     result = ""
     result << "#{no_bindings_exist_message}" unless bindings_exist
-    result << "\n\nAfter binding or unbinding any service instances, restart this application with 'cf restart <appname>'."
+    result << "\n\nAfter binding or unbinding any service instances, restart this application with 'cf restart [appname]'."
     result
   end
 
