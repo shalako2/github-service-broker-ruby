@@ -129,8 +129,12 @@ BASH
     result
   end
 
+  def vcap_services
+    ENV["VCAP_SERVICES"]
+  end
+
   def bindings_exist
-    JSON.parse(ENV["VCAP_SERVICES"]).keys.any? { |key|
+    JSON.parse(vcap_services).keys.any? { |key|
       key == service_name
     }
   end
@@ -145,7 +149,7 @@ BASH
 
   def credentials_of_all_repos
     if bindings_exist
-      JSON.parse(ENV["VCAP_SERVICES"])[service_name].map do |service_instance|
+      JSON.parse(vcap_services)[service_name].map do |service_instance|
         service_instance["credentials"]
       end
     end
