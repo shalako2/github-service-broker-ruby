@@ -1,23 +1,5 @@
 require File.expand_path '../test_helper.rb', __FILE__
-
-require 'capybara'
-require 'capybara/dsl'
-require 'capybara_minitest_spec'
-#require 'capybara/webkit'
-require 'octokit'
-
-Capybara.app = ServiceConsumerApp
-#Capybara.default_driver = :webkit
-
-class MiniTest::Spec
-  include Capybara::DSL
-end
-
-#class Capybara::Session
-#  def params
-#    Hash[*URI.parse(current_url).query.split(/\?|=|&/)]
-#  end
-#end
+require File.expand_path '../integration_test_helper.rb', __FILE__
 
 describe "/" do
   before do
@@ -51,24 +33,17 @@ JSON
   it "creates a commit when the commit button is clicked" do
     initial_commit_count = count_commits_in_repo
     click_on "Create a commit"
-
+    sleep(2)
     final_commit_count = count_commits_in_repo
 
     assert_equal initial_commit_count + 1, final_commit_count
   end
 end
 
-after :all do
-  Capybara.reset_sessions!
-  Capybara.use_default_driver
-end
 
 private
 
 def count_commits_in_repo
-  #puts github_client.inspect
-  #
-  #puts repo_fullname
   github_client.commits(repo_fullname).length
 end
 
@@ -95,7 +70,6 @@ end
 def repo_fullname
   "#{username}/#{repo_name}"
 end
-
 
 def github_client
   ::Octokit::Client.new(login: ENV["GITHUB_USERNAME"], password: ENV["GITHUB_PASSWORD"])

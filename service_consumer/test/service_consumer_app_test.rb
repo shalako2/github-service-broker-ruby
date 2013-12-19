@@ -10,7 +10,7 @@ def service_name
   "github-repo"
 end
 
-describe "/" do
+describe "GET /" do
   def make_request
     get "/"
   end
@@ -90,24 +90,10 @@ HTML
       last_response.body.must_include expected_link.strip
     end
 
-    it "displays a commit button for each bound instance" do
-      make_request
-
-#      last_response.body.must_include <<HTML
-#<form action="/create_commit" method="post">
-#<input type="hidden" name="repo_url" value="https://github.com/octocat/hello-world">
-#<input type="submit" value="Create a commit">
-#</form>
-#HTML
-      last_response.body.must_include <<HTML
-<input type="hidden" name="repo_url" value="https://github.com/octocat/hello-world">
-HTML
-
-    end
   end
 end
 
-describe "/env" do
+describe "GET /env" do
   def make_request
     get "/env"
   end
@@ -204,6 +190,131 @@ JSON
       make_request
 
       last_response.body.must_match /VCAP_SERVICES = \n\{}/
+    end
+  end
+end
+
+describe "POST /create_commit" do
+  def make_request
+    post "/create_commit", repo_uri: @repo_uri
+  end
+
+  def flash
+    last_request.env['x-rack.flash']
+  end
+
+  before do
+    @repo_uri = "http://fake.github.com/some-user/some-repo"
+    @vcap_services_value = <<JSON
+      {
+        "github-repo": [
+          {
+            "name": "github-repo-1",
+            "label": "github-repo-n/a",
+            "plan": "public",
+            "credentials": {
+              "password": "topsecret",
+              "uri": "#{@repo_uri}"
+            }
+          },
+          {
+            "name": "github-repo-2",
+            "label": "github-repo-n/a",
+            "plan": "public",
+            "credentials": {
+              "password": "also-very-secret",
+              "uri": "uri-of-the-other-repo"
+            }
+          }
+        ]
+      }
+JSON
+
+    ENV.stubs(:[]).with("VCAP_SERVICES").returns(@vcap_services_value)
+  end
+
+  it "calls GithubRepoHelper#create_commit with the repo URI" do
+    all_credentials = [
+        {
+            "password" => "topsecret",
+            "uri" => @repo_uri
+        },
+        {
+            "password" => "also-very-secret",
+            "uri" => "uri-of-the-other-repo"
+        }
+    ]
+
+    fake_github_repo_helper = mock
+    GithubRepoHelper.expects(:new).with(all_credentials).returns(fake_github_repo_helper)
+    fake_github_repo_helper.expects(:create_commit).with(@repo_uri)
+
+    make_request
+  end
+
+  it "redirects to the index page" do
+    GithubRepoHelper.any_instance.stubs(:create_commit)
+
+    make_request
+
+    last_response.must_be :redirect?
+    follow_redirect!
+    last_request.path.must_equal "/"
+  end
+
+  describe "when creating the commit succeeds" do
+    it "shows a success message in the flash" do
+      GithubRepoHelper.any_instance.stubs(:create_commit)
+
+      make_request
+
+      follow_redirect!
+      flash.wont_be_nil
+      assert last_response.body.must_include "Successfully pushed commit to #{@repo_uri}"
+    end
+  end
+
+  describe "when creating the commit fails" do
+    describe "because the repo URI is not found" do
+      before do
+        GithubRepoHelper.any_instance.stubs(:create_commit).raises(GithubRepoHelper::RepoUriNotFoundError)
+      end
+
+      it "redirects to the index page with the error message in the flash" do
+        make_request
+
+        follow_redirect!
+        flash.wont_be_nil
+        assert last_response.body.must_include "Unable to create the commit, repo not found: #{@repo_uri}"
+      end
+    end
+
+    describe "because the repo credentials are invalid" do
+      before do
+        GithubRepoHelper.any_instance.stubs(:create_commit).raises(GithubRepoHelper::RepoCredentialsInvalidError)
+      end
+
+      it "redirects to the index page with the error message in the flash" do
+        make_request
+
+        follow_redirect!
+        flash.wont_be_nil
+        assert last_response.body.must_include "Unable to create the commit, repo credentials in VCAP_SERVICES are invalid for: #{@repo_uri}"
+      end
+    end
+
+    describe "for any other reason" do
+      before do
+        GithubRepoHelper.any_instance.stubs(:create_commit).raises(GithubRepoHelper::CreateCommitError)
+      end
+
+      it "redirects to the index page with the error message in the flash" do
+        make_request
+
+        follow_redirect!
+        flash.wont_be_nil
+        assert last_response.body.must_include "Creating the commit failed"
+      end
     end
   end
 end

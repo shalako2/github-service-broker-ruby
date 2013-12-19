@@ -8,6 +8,12 @@
     }
 </style>
 
+<% if flash[:notice] %>
+    <%= flash[:notice] %>
+    <br/>
+    <br/>
+<% end %>
+
 <% unless repo_uris.nil? %>
     <table>
       <tr>
@@ -17,10 +23,12 @@
       <% repo_uris.each do |uri| %>
           <tr>
             <td><a href="<%= uri %>"><%= uri %></a></td>
-            <td><form action="/create_commit" method="post">
-              <input type="hidden" name="repo_url" value="<%= uri %>">
-              <input type="submit" value="Create a commit">
-            </form></td>
+            <td>
+              <form action="/create_commit" method="post">
+                <input type="hidden" name="repo_uri" value="<%= uri %>">
+                <input type="submit" value="Create a commit">
+              </form>
+            </td>
           </tr>
       <% end %>
     </table>
